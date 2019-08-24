@@ -4,15 +4,12 @@ import java.io.File;
 import java.io.InputStream;
 import java.util.List;
 
+import com.google.common.collect.Lists;
 import junit.framework.Assert;
 
 import org.activiti.bpmn.BpmnAutoLayout;
-import org.activiti.bpmn.model.BpmnModel;
-import org.activiti.bpmn.model.EndEvent;
+import org.activiti.bpmn.model.*;
 import org.activiti.bpmn.model.Process;
-import org.activiti.bpmn.model.SequenceFlow;
-import org.activiti.bpmn.model.StartEvent;
-import org.activiti.bpmn.model.UserTask;
 import org.activiti.engine.repository.Deployment;
 import org.activiti.engine.runtime.ProcessInstance;
 import org.activiti.engine.task.Task;
@@ -29,8 +26,8 @@ public class DynamicActivitiProcessTest {
   @Test
   public void testDynamicDeploy() throws Exception {
 
-    String processDefinitionKey = "my-process";
-    String businessKey = "5";
+    String processDefinitionKey = "my-process-3";
+    String businessKey = "1";
 
     // 1. Build up the model from scratch
     BpmnModel model = new BpmnModel();
@@ -38,11 +35,23 @@ public class DynamicActivitiProcessTest {
     model.addProcess(process);
     process.setId(processDefinitionKey);
 
+    List<FormProperty> list = Lists.newArrayList();
+    FormProperty form1 = new FormProperty();
+    form1.setId("action");
+    form1.setName("动作");
+    list.add(form1);
+
+    FormProperty form2 = new FormProperty();
+    form2.setId("msg");
+    form2.setName("审批信息");
+    list.add(form2);
+
+
     process.addFlowElement(createStartEvent());
-    process.addFlowElement(createUserTask("task1", "First task", "fred"));
-    process.addFlowElement(createUserTask("task2", "Second task", "john"));
-    process.addFlowElement(createUserTask("task3", "third task", "jack"));
-    process.addFlowElement(createUserTask("task4", "four task", "tom"));
+    process.addFlowElement(createUserTask("task1", "First task", "fred",list));
+    process.addFlowElement(createUserTask("task2", "Second task", "john",list));
+    process.addFlowElement(createUserTask("task3", "third task", "jack",list));
+    process.addFlowElement(createUserTask("task4", "four task", "${approveUser}",list));
     process.addFlowElement(createEndEvent());
 
     process.addFlowElement(createSequenceFlow("start", "task1"));
@@ -73,11 +82,11 @@ public class DynamicActivitiProcessTest {
 
     // 6. Save process diagram to a file
     InputStream processDiagram = activitiRule.getRepositoryService().getProcessDiagram(processInstance.getProcessDefinitionId());
-    FileUtils.copyInputStreamToFile(processDiagram, new File("target/diagram.png"));
+    FileUtils.copyInputStreamToFile(processDiagram, new File("target/"+ processDefinitionKey +".png"));
 
     // 7. Save resulting BPMN xml to a file
     InputStream processBpmn = activitiRule.getRepositoryService().getResourceAsStream(deployment.getId(), "dynamic-model.bpmn");
-    FileUtils.copyInputStreamToFile(processBpmn, new File("target/process.bpmn20.xml"));
+    FileUtils.copyInputStreamToFile(processBpmn, new File("target/"+ processDefinitionKey +".bpmn.xml"));
 
   }
 
@@ -90,11 +99,12 @@ public class DynamicActivitiProcessTest {
    * @param assignee
    * @return
    */
-  protected UserTask createUserTask(String id, String name, String assignee) {
+  protected UserTask createUserTask(String id, String name, String assignee,List<FormProperty> list) {
     UserTask userTask = new UserTask();
     userTask.setName(name);
     userTask.setId(id);
     userTask.setAssignee(assignee);
+    userTask.setFormProperties(list);
     return userTask;
   }
 

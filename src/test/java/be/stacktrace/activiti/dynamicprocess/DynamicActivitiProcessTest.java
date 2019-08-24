@@ -28,11 +28,15 @@ public class DynamicActivitiProcessTest {
 
   @Test
   public void testDynamicDeploy() throws Exception {
+
+    String processDefinitionKey = "my-process";
+    String businessKey = "5";
+
     // 1. Build up the model from scratch
     BpmnModel model = new BpmnModel();
     Process process = new Process();
     model.addProcess(process);
-    process.setId("my-process");
+    process.setId(processDefinitionKey);
 
     process.addFlowElement(createStartEvent());
     process.addFlowElement(createUserTask("task1", "First task", "fred"));
@@ -57,7 +61,7 @@ public class DynamicActivitiProcessTest {
 
     // 4. Start a process instance
     ProcessInstance processInstance = activitiRule.getRuntimeService()
-        .startProcessInstanceByKey("my-process");
+        .startProcessInstanceByKey(processDefinitionKey,businessKey);
 
     // 5. Check if task is available
     List<Task> tasks = activitiRule.getTaskService().createTaskQuery()
@@ -74,8 +78,18 @@ public class DynamicActivitiProcessTest {
     // 7. Save resulting BPMN xml to a file
     InputStream processBpmn = activitiRule.getRepositoryService().getResourceAsStream(deployment.getId(), "dynamic-model.bpmn");
     FileUtils.copyInputStreamToFile(processBpmn, new File("target/process.bpmn20.xml"));
+
   }
 
+
+  /**
+   * 创建任务节点
+   * 单人审批
+   * @param id
+   * @param name
+   * @param assignee
+   * @return
+   */
   protected UserTask createUserTask(String id, String name, String assignee) {
     UserTask userTask = new UserTask();
     userTask.setName(name);
@@ -84,6 +98,13 @@ public class DynamicActivitiProcessTest {
     return userTask;
   }
 
+
+  /**
+   * 连线
+   * @param from
+   * @param to
+   * @return
+   */
   protected SequenceFlow createSequenceFlow(String from, String to) {
     SequenceFlow flow = new SequenceFlow();
     flow.setSourceRef(from);
@@ -91,12 +112,20 @@ public class DynamicActivitiProcessTest {
     return flow;
   }
 
+  /**
+   * 开始节点
+   * @return
+   */
   protected StartEvent createStartEvent() {
     StartEvent startEvent = new StartEvent();
     startEvent.setId("start");
     return startEvent;
   }
 
+  /**
+   * 结束节点
+   * @return
+   */
   protected EndEvent createEndEvent() {
     EndEvent endEvent = new EndEvent();
     endEvent.setId("end");

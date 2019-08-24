@@ -40,7 +40,7 @@ public class DynamicActivitiProcessTest2 {
 
     private static final Logger logger = LoggerFactory.getLogger(DynamicActivitiProcessTest2.class);
 
-    static String processDefinitionKey = "my-process-1";
+    static String processDefinitionKey = "my-process-2";
 
     @Test
     public void testDynamicDeploy123() {
@@ -48,23 +48,23 @@ public class DynamicActivitiProcessTest2 {
         String businessKey = "5";
 
         //1、审核人
-        final FlowNodeApproverDTO apna1 = new FlowNodeApproverDTO("process_1","AuditProcessNodeApprover_name_1","AuditProcessNodeApprover_approved_1");
-        final FlowNodeApproverDTO apna2 = new FlowNodeApproverDTO("process_2","AuditProcessNodeApprover_name_2","AuditProcessNodeApprover_approved_2");
+        final FlowNodeApproverDTO apna1 = new FlowNodeApproverDTO("approver_1_id","approver_1_name","approver_1_approver");
+        final FlowNodeApproverDTO apna2 = new FlowNodeApproverDTO("approver_2_id","approver_2_name","approver_2_approver");
         List<FlowNodeApproverDTO> approverList = new ArrayList<FlowNodeApproverDTO>(){{
             add(apna1);
             add(apna2);
         }};
 
         //2、审核节点
-        final FlowNodeDTO flowNodeDTO1 = new FlowNodeDTO("approvers_id_1","approvers_name_1",approverList);
-        final FlowNodeDTO flowNodeDTO2 = new FlowNodeDTO("approvers_id_2","approvers_name_2",approverList);
+        final FlowNodeDTO flowNodeDTO1 = new FlowNodeDTO("node_id_1","node_name_1",approverList);
+        final FlowNodeDTO flowNodeDTO2 = new FlowNodeDTO("node_id_2","node_name_2",approverList);
         List<FlowNodeDTO> processNodes = new ArrayList<FlowNodeDTO>(){{
             add(flowNodeDTO1);
             add(flowNodeDTO2);
         }};
 
         //3、审批流
-        ProcessFlowDTO processFlowDTO = new ProcessFlowDTO(processDefinitionKey,"process_flow_test_1",processNodes);
+        ProcessFlowDTO processFlowDTO = new ProcessFlowDTO(processDefinitionKey,"process_flow_test_2",processNodes);
 
         deployProcess(processFlowDTO);
     }
@@ -94,8 +94,6 @@ public class DynamicActivitiProcessTest2 {
             int size = processFlowDTO.getProcessNodes().size();
             process.addFlowElement(createStartEvent());
 
-            String ProcessIDPrefix = "sunlands";
-
             /**
              *生成流程
              */
@@ -104,14 +102,14 @@ public class DynamicActivitiProcessTest2 {
                 for (FlowNodeApproverDTO approver : processFlowDTO.getProcessNodes().get(i).getApprovers()) {
                     users.add(approver.getApproved());
                 }
-                process.addFlowElement(createUsersTask(ProcessIDPrefix + processFlowDTO.getProcessNodes().get(i).getId(), processFlowDTO.getProcessNodes().get(i).getName(), users));
+                process.addFlowElement(createUsersTask(processFlowDTO.getProcessNodes().get(i).getId(), processFlowDTO.getProcessNodes().get(i).getName(), users));
                 if (i == 0) {
-                    process.addFlowElement(createSequenceFlow("startEvent", ProcessIDPrefix + processFlowDTO.getProcessNodes().get(i).getId()));
+                    process.addFlowElement(createSequenceFlow("startEvent", processFlowDTO.getProcessNodes().get(i).getId()));
                 }else {
-                    process.addFlowElement(createSequenceFlow(ProcessIDPrefix + processFlowDTO.getProcessNodes().get(i - 1).getId(), ProcessIDPrefix + processFlowDTO.getProcessNodes().get(i).getId()));
+                    process.addFlowElement(createSequenceFlow(processFlowDTO.getProcessNodes().get(i - 1).getId(), processFlowDTO.getProcessNodes().get(i).getId()));
                 }
                 if (i == size - 1) {
-                    process.addFlowElement(createSequenceFlow(ProcessIDPrefix + processFlowDTO.getProcessNodes().get(i).getId(), "endEvent"));
+                    process.addFlowElement(createSequenceFlow(processFlowDTO.getProcessNodes().get(i).getId(), "endEvent"));
                 }
             }
             process.addFlowElement(createEndEvent());
@@ -140,12 +138,12 @@ public class DynamicActivitiProcessTest2 {
 
             // 6. Save process diagram to a file
             InputStream processDiagram = activitiRule.getRepositoryService().getProcessDiagram(processInstance.getProcessDefinitionId());
-            FileUtils.copyInputStreamToFile(processDiagram, new File("target/resources/bpmn/" + processDefinitionKey +".png"));
+//            FileUtils.copyInputStreamToFile(processDiagram, new File("target/resources/bpmn/" + processDefinitionKey +".png"));
             FileUtils.copyInputStreamToFile(processDiagram, new File("src/test/resources/bpmn/" + processDefinitionKey +".png"));
 
             // 7. Save resulting BPMN xml to a file
             InputStream processBpmn = activitiRule.getRepositoryService().getResourceAsStream(deployment.getId(), process.getId() + ".bpmn");
-            FileUtils.copyInputStreamToFile(processBpmn, new File("target/resources/bpmn/" + processDefinitionKey + ".bpmn.xml"));
+//            FileUtils.copyInputStreamToFile(processBpmn, new File("target/resources/bpmn/" + processDefinitionKey + ".bpmn.xml"));
             FileUtils.copyInputStreamToFile(processBpmn, new File("src/test/resources/bpmn/" + processDefinitionKey + ".bpmn.xml"));
 
         } catch (Exception e) {

@@ -1,9 +1,8 @@
 package be.stacktrace.activiti.dynamicprocess;
 
-import be.stacktrace.activiti.dynamicprocess.dto.Approvers;
-import be.stacktrace.activiti.dynamicprocess.dto.AuditProcessNodeApprover;
-import be.stacktrace.activiti.dynamicprocess.dto.ProcessFlow;
-import com.google.common.collect.Lists;
+import be.stacktrace.activiti.dynamicprocess.dto.FlowNodeDTO;
+import be.stacktrace.activiti.dynamicprocess.dto.FlowNodeApproverDTO;
+import be.stacktrace.activiti.dynamicprocess.dto.ProcessFlowDTO;
 import junit.framework.Assert;
 import org.activiti.bpmn.BpmnAutoLayout;
 import org.activiti.bpmn.model.Process;
@@ -46,38 +45,37 @@ public class DynamicActivitiProcessTest2 {
     @Test
     public void testDynamicDeploy123() {
 
-
         String businessKey = "5";
 
         //1、审核人
-        final AuditProcessNodeApprover apna1 = new AuditProcessNodeApprover("process_1","AuditProcessNodeApprover_name_1","AuditProcessNodeApprover_approved_1");
-        final AuditProcessNodeApprover apna2 = new AuditProcessNodeApprover("process_2","AuditProcessNodeApprover_name_2","AuditProcessNodeApprover_approved_2");
-        List<AuditProcessNodeApprover> approverList = new ArrayList<AuditProcessNodeApprover>(){{
+        final FlowNodeApproverDTO apna1 = new FlowNodeApproverDTO("process_1","AuditProcessNodeApprover_name_1","AuditProcessNodeApprover_approved_1");
+        final FlowNodeApproverDTO apna2 = new FlowNodeApproverDTO("process_2","AuditProcessNodeApprover_name_2","AuditProcessNodeApprover_approved_2");
+        List<FlowNodeApproverDTO> approverList = new ArrayList<FlowNodeApproverDTO>(){{
             add(apna1);
             add(apna2);
         }};
 
         //2、审核节点
-        final Approvers approvers1 = new Approvers("approvers_id_1","approvers_name_1",approverList);
-        final Approvers approvers2 = new Approvers("approvers_id_2","approvers_name_2",approverList);
-        List<Approvers> processNodes = new ArrayList<Approvers>(){{
-            add(approvers1);
-            add(approvers2);
+        final FlowNodeDTO flowNodeDTO1 = new FlowNodeDTO("approvers_id_1","approvers_name_1",approverList);
+        final FlowNodeDTO flowNodeDTO2 = new FlowNodeDTO("approvers_id_2","approvers_name_2",approverList);
+        List<FlowNodeDTO> processNodes = new ArrayList<FlowNodeDTO>(){{
+            add(flowNodeDTO1);
+            add(flowNodeDTO2);
         }};
 
         //3、审批流
-        ProcessFlow processFlow = new ProcessFlow(processDefinitionKey,"process_flow_test_1",processNodes);
+        ProcessFlowDTO processFlowDTO = new ProcessFlowDTO(processDefinitionKey,"process_flow_test_1",processNodes);
 
-        deployProcess(processFlow);
+        deployProcess(processFlowDTO);
     }
 
 
     /**
      * 部署流程
-     * @param processFlow
+     * @param processFlowDTO
      * @return
      */
-    public Integer deployProcess(ProcessFlow processFlow) {
+    public Integer deployProcess(ProcessFlowDTO processFlowDTO) {
 
         try {
             BpmnModel model = new BpmnModel();
@@ -87,13 +85,13 @@ public class DynamicActivitiProcessTest2 {
             /**
              *process的id不能以数字开头
              */
-            process.setId(processFlow.getId());
+            process.setId(processFlowDTO.getId());
             List<String> users;
 
             /**
              *获取流程的节点数量
              */
-            int size = processFlow.getProcessNodes().size();
+            int size = processFlowDTO.getProcessNodes().size();
             process.addFlowElement(createStartEvent());
 
             String ProcessIDPrefix = "sunlands";
@@ -103,17 +101,17 @@ public class DynamicActivitiProcessTest2 {
              */
             for (int i = 0, j = size; i < j; i++) {
                 users = new ArrayList<String>();
-                for (AuditProcessNodeApprover approver : processFlow.getProcessNodes().get(i).getApprovers()) {
+                for (FlowNodeApproverDTO approver : processFlowDTO.getProcessNodes().get(i).getApprovers()) {
                     users.add(approver.getApproved());
                 }
-                process.addFlowElement(createUsersTask(ProcessIDPrefix + processFlow.getProcessNodes().get(i).getId(), processFlow.getProcessNodes().get(i).getName(), users));
+                process.addFlowElement(createUsersTask(ProcessIDPrefix + processFlowDTO.getProcessNodes().get(i).getId(), processFlowDTO.getProcessNodes().get(i).getName(), users));
                 if (i == 0) {
-                    process.addFlowElement(createSequenceFlow("startEvent", ProcessIDPrefix + processFlow.getProcessNodes().get(i).getId()));
+                    process.addFlowElement(createSequenceFlow("startEvent", ProcessIDPrefix + processFlowDTO.getProcessNodes().get(i).getId()));
                 }else {
-                    process.addFlowElement(createSequenceFlow(ProcessIDPrefix + processFlow.getProcessNodes().get(i - 1).getId(), ProcessIDPrefix + processFlow.getProcessNodes().get(i).getId()));
+                    process.addFlowElement(createSequenceFlow(ProcessIDPrefix + processFlowDTO.getProcessNodes().get(i - 1).getId(), ProcessIDPrefix + processFlowDTO.getProcessNodes().get(i).getId()));
                 }
                 if (i == size - 1) {
-                    process.addFlowElement(createSequenceFlow(ProcessIDPrefix + processFlow.getProcessNodes().get(i).getId(), "endEvent"));
+                    process.addFlowElement(createSequenceFlow(ProcessIDPrefix + processFlowDTO.getProcessNodes().get(i).getId(), "endEvent"));
                 }
             }
             process.addFlowElement(createEndEvent());
@@ -125,12 +123,12 @@ public class DynamicActivitiProcessTest2 {
 
             //将流程部署到引擎
             Deployment deployment = activitiRule.getRepositoryService().createDeployment()
-                    .addBpmnModel(process.getId() + ".bpmn", model).name(processFlow.getName())
+                    .addBpmnModel(process.getId() + ".bpmn", model).name(processFlowDTO.getName())
                     .deploy();
 
             // 4. Start a process instance
             ProcessInstance processInstance = activitiRule.getRuntimeService()
-                    .startProcessInstanceByKey(processFlow.getId(),processFlow.getId());
+                    .startProcessInstanceByKey(processFlowDTO.getId(), processFlowDTO.getId());
 
             // 5. Check if task is available
             List<Task> tasks = activitiRule.getTaskService().createTaskQuery()
@@ -142,11 +140,13 @@ public class DynamicActivitiProcessTest2 {
 
             // 6. Save process diagram to a file
             InputStream processDiagram = activitiRule.getRepositoryService().getProcessDiagram(processInstance.getProcessDefinitionId());
-            FileUtils.copyInputStreamToFile(processDiagram, new File("target/" + processDefinitionKey +".png"));
+            FileUtils.copyInputStreamToFile(processDiagram, new File("target/resources/bpmn/" + processDefinitionKey +".png"));
+            FileUtils.copyInputStreamToFile(processDiagram, new File("src/test/resources/bpmn/" + processDefinitionKey +".png"));
 
             // 7. Save resulting BPMN xml to a file
             InputStream processBpmn = activitiRule.getRepositoryService().getResourceAsStream(deployment.getId(), process.getId() + ".bpmn");
-            FileUtils.copyInputStreamToFile(processBpmn, new File("target/" + processDefinitionKey + ".bpmn.xml"));
+            FileUtils.copyInputStreamToFile(processBpmn, new File("target/resources/bpmn/" + processDefinitionKey + ".bpmn.xml"));
+            FileUtils.copyInputStreamToFile(processBpmn, new File("src/test/resources/bpmn/" + processDefinitionKey + ".bpmn.xml"));
 
         } catch (Exception e) {
             logger.error("添加流程异常",e);

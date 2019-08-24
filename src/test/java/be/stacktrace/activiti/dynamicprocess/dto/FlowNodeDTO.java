@@ -15,23 +15,23 @@ import java.util.List;
  */
 
 @Data
-public class Approvers {
+public class FlowNodeDTO {
 
     private String id;
 
     private String name;
 
-    private List<AuditProcessNodeApprover> approvers;
+    private List<FlowNodeApproverDTO> approvers;
 
-    public Approvers() {
+    public FlowNodeDTO() {
     }
 
-    public Approvers(String id, String name) {
+    public FlowNodeDTO(String id, String name) {
         this.id = id;
         this.name = name;
     }
 
-    public Approvers(String id, String name, List<AuditProcessNodeApprover> approvers) {
+    public FlowNodeDTO(String id, String name, List<FlowNodeApproverDTO> approvers) {
         this.id = id;
         this.name = name;
         this.approvers = approvers;

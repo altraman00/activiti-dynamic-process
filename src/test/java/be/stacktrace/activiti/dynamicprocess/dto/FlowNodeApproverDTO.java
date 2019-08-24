@@ -13,7 +13,7 @@ import lombok.Data;
  */
 
 @Data
-public class AuditProcessNodeApprover {
+public class FlowNodeApproverDTO {
 
     private String id;
 
@@ -21,10 +21,10 @@ public class AuditProcessNodeApprover {
 
     private String approved;
 
-    public AuditProcessNodeApprover() {
+    public FlowNodeApproverDTO() {
     }
 
-    public AuditProcessNodeApprover(String id, String name, String approved) {
+    public FlowNodeApproverDTO(String id, String name, String approved) {
         this.id = id;
         this.name = name;
         this.approved = approved;

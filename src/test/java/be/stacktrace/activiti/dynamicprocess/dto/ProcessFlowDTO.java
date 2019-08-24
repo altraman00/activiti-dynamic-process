@@ -14,23 +14,23 @@ import java.util.List;
  * ------------    --------------    ---------------------------------
  */
 @Data
-public class ProcessFlow {
+public class ProcessFlowDTO {
 
     private String id;
 
     private String name;
 
-    private List<Approvers> processNodes;
+    private List<FlowNodeDTO> processNodes;
 
-    public ProcessFlow() {
+    public ProcessFlowDTO() {
     }
 
-    public ProcessFlow(String id, String name) {
+    public ProcessFlowDTO(String id, String name) {
         this.id = id;
         this.name = name;
     }
 
-    public ProcessFlow(String id, String name, List<Approvers> processNodes) {
+    public ProcessFlowDTO(String id, String name, List<FlowNodeDTO> processNodes) {
         this.id = id;
         this.name = name;
         this.processNodes = processNodes;

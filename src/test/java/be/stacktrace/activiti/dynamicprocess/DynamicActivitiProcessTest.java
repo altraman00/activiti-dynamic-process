@@ -26,7 +26,7 @@ public class DynamicActivitiProcessTest {
   @Test
   public void testDynamicDeploy() throws Exception {
 
-    String processDefinitionKey = "my-process-3";
+    String processDefinitionKey = "my-process-8";
     String businessKey = "1";
 
     // 1. Build up the model from scratch
@@ -49,17 +49,15 @@ public class DynamicActivitiProcessTest {
 
     process.addFlowElement(createStartEvent());
     process.addFlowElement(createUserTask("task1", "First task", "fred",list));
-    process.addFlowElement(createUserTask("task2", "Second task", "john",list));
-    process.addFlowElement(createUserTask("task3", "third task", "jack",list));
-    process.addFlowElement(createUserTask("task4", "four task", "${approveUser}",list));
+    process.addFlowElement(createUserTask("task2", "Second task", "${approveUser}",list));
     process.addFlowElement(createEndEvent());
 
     process.addFlowElement(createSequenceFlow("start", "task1"));
-    process.addFlowElement(createSequenceFlow("task1", "task2"));
-    process.addFlowElement(createSequenceFlow("task2", "task3"));
-    process.addFlowElement(createSequenceFlow("task3", "task4"));
-    process.addFlowElement(createSequenceFlow("task4", "end"));
-    process.addFlowElement(createSequenceFlow("task3", "end"));
+    process.addFlowElement(createSequenceFlow("task1", "gateway1"));
+    process.addFlowElement(createParallelGateway("gateway1","task1网关"));
+    process.addFlowElement(createSequenceFlow("gateway1", "task2"));
+    process.addFlowElement(createSequenceFlow("gateway1", "end"));
+    process.addFlowElement(createSequenceFlow("task2", "end"));
 
     // 2. Generate graphical information
     new BpmnAutoLayout(model).execute();
@@ -81,8 +79,8 @@ public class DynamicActivitiProcessTest {
     Assert.assertEquals("fred", tasks.get(0).getAssignee());
 
     // 6. Save process diagram to a file
-    InputStream processDiagram = activitiRule.getRepositoryService().getProcessDiagram(processInstance.getProcessDefinitionId());
-    FileUtils.copyInputStreamToFile(processDiagram, new File("target/"+ processDefinitionKey +".png"));
+//    InputStream processDiagram = activitiRule.getRepositoryService().getProcessDiagram(processInstance.getProcessDefinitionId());
+//    FileUtils.copyInputStreamToFile(processDiagram, new File("target/"+ processDefinitionKey +".png"));
 
     // 7. Save resulting BPMN xml to a file
     InputStream processBpmn = activitiRule.getRepositoryService().getResourceAsStream(deployment.getId(), "dynamic-model.bpmn");
@@ -123,6 +121,18 @@ public class DynamicActivitiProcessTest {
   }
 
   /**
+   * 创建排他网关  由前面SequenceFlow的targetId指向网关id，后面的SequenceFlow的sourceId也指向网关id
+   * @return
+   */
+  protected ExclusiveGateway createParallelGateway(String gatewayId,String gatewayName){
+    ExclusiveGateway gateway = new ExclusiveGateway();
+    gateway.setId(gatewayId);
+    gateway.setName(gatewayName);
+    return gateway;
+  }
+
+
+  /**
    * 开始节点
    * @return
    */
@@ -141,4 +151,7 @@ public class DynamicActivitiProcessTest {
     endEvent.setId("end");
     return endEvent;
   }
+
+
+
 }

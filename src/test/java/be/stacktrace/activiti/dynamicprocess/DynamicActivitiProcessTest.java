@@ -54,7 +54,7 @@ public class DynamicActivitiProcessTest {
 
     process.addFlowElement(createSequenceFlow("start", "task1"));
     process.addFlowElement(createSequenceFlow("task1", "gateway1"));
-    process.addFlowElement(createParallelGateway("gateway1","task1网关"));
+    process.addFlowElement(createExclusiveGateway("gateway1","task1网关"));
     process.addFlowElement(createSequenceFlow("gateway1", "task2"));
     process.addFlowElement(createSequenceFlow("gateway1", "end"));
     process.addFlowElement(createSequenceFlow("task2", "end"));
@@ -124,7 +124,7 @@ public class DynamicActivitiProcessTest {
    * 创建排他网关  由前面SequenceFlow的targetId指向网关id，后面的SequenceFlow的sourceId也指向网关id
    * @return
    */
-  protected ExclusiveGateway createParallelGateway(String gatewayId,String gatewayName){
+  protected ExclusiveGateway createExclusiveGateway(String gatewayId, String gatewayName){
     ExclusiveGateway gateway = new ExclusiveGateway();
     gateway.setId(gatewayId);
     gateway.setName(gatewayName);

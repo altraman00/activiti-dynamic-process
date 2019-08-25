@@ -24,8 +24,8 @@ public class WorkFlowTest {
 
     private static final Logger logger = LoggerFactory.getLogger(WorkFlowTest.class);
 
-    String processDefinitionKey = "my-process";
-    String businessKey = "6";
+    String processDefinitionKey = "my-process-3";
+    String businessKey = "3";
 
     @Rule
     public ActivitiRule activitiRule = new ActivitiRule();

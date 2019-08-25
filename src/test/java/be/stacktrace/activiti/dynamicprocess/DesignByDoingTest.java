@@ -37,11 +37,16 @@ public class DesignByDoingTest {
 
     @Test
     public void testSequentialUserTasksProcessModel() throws Exception {
+        //创建流程
         designProcessByDoing_processModel();
 //        //判断是否有未结束的instance 暂时屏蔽
 //        assertThatNextProcessInstanceIsTheSame();
     }
 
+
+    /**
+     * 判断是否有未结束的instance
+     */
     private void assertThatNextProcessInstanceIsTheSame() {
         // execute next process instance according to already created process definition
         String doingByDesignProcessInstanceId = activitiRule.getRuntimeService()
@@ -56,40 +61,68 @@ public class DesignByDoingTest {
         assertThat("All process instances must be finished", this.activitiRule.getRuntimeService().createProcessInstanceQuery().count(), is(0L));
     }
 
+
+    /**
+     * 创建流程
+     * @throws IOException
+     */
     private void designProcessByDoing_processModel() throws IOException {
-        // Fred initializes design by doing process - it means he creates the first process model with one task
-        // with name 'Make a record' assigned to him
+        //Fred通过执行流程来初始化设计，用一个任务创建第一个流程模型
+        //创建一个单个节点的流程
         ProcessInstance processInstance = createAdaptiveProcessInstance("Fred", "Make a record");
 
-        assertThat("User task with the name 'Make a record' assigned to 'Fred' exists",
-                this.activitiRule.getTaskService().createTaskQuery().taskAssignee("Fred").taskName("Make a record").count(), is(1L));
+//        assertThat("User task with the name 'Make a record' assigned to 'Fred' exists",
+//                this.activitiRule.getTaskService().createTaskQuery().taskAssignee("Fred").taskName("Make a record").count(), is(1L));
+
+        //生成bpmn文件
         exportProcessDefinition(processInstance.getProcessDefinitionId(), "target/step-1-", "designByDoing-model.bpmn");
 
-        // Fred has to specify who is the next user to continue in the process execution and what he should do
+        //Fred指定下一个节点
         processInstance = addUserTask(processInstance, "Create inventory list", "John", "target/step-2-");
-        // now Fred can complete his task and process instance can continue to the next step
+
+        //现在Fred可以完成他的任务，流程实例可以继续下一步
         assertAndCompleteTask("Make a record", processInstance.getId(), "Fred");
 
-        // assert that the next task exists
+        //断言下一个任务存在
         assertThat("User task with the name 'Create inventory list' assigned to 'John' exists",
                 this.activitiRule.getTaskService().createTaskQuery().taskAssignee("John").taskName("Create inventory list").count(), is(1L));
 
-        // Process instance is still not finished John has to specify who has to take care of the process execution next
+        //流程实例仍未完成John必须指定谁必须负责接下来的流程执行
         processInstance = addUserTask(processInstance, "Collect inventory", "Bill", "target/step-3-");
-        // now John can complete his task and process instance can continue to the next step
+
+        //现在John可以完成他的任务，流程实例可以继续下一步
         assertAndCompleteTask("Create inventory list", processInstance.getId(), "John");
 
-        // Bill has collected all inventory. Bill can complete the task and end the process instance. Process model was designed by doing.
+        //所有节点到Bill这结束， Bill结束这个流程实例。流程节点添加完毕
         assertAndCompleteTask("Collect inventory", processInstance.getId(), "Bill");
     }
 
+
+    /**
+     * 增加节点
+     * @param processInstance
+     * @param userTaskName
+     * @param assigneeId
+     * @param namePrefix
+     * @return
+     * @throws IOException
+     */
     private ProcessInstance addUserTask(ProcessInstance processInstance, String userTaskName, String assigneeId, String namePrefix) throws IOException {
         addUserTaskToProcessInstance(processInstance, userTaskName, assigneeId);
         processInstance = this.activitiRule.getRuntimeService().createProcessInstanceQuery().processInstanceId(processInstance.getId()).singleResult();
+
+        //再生成一个bpmn文件
         exportProcessDefinition(processInstance.getProcessDefinitionId(), namePrefix, "designByDoing-model.bpmn");
         return processInstance;
     }
 
+
+    /**
+     * 完成节点任务
+     * @param taskName
+     * @param processInstanceId
+     * @param assigneeId
+     */
     private void assertAndCompleteTask(String taskName, String processInstanceId, String assigneeId) {
         Task task = this.activitiRule.getTaskService().createTaskQuery().
                 processInstanceId(processInstanceId).
@@ -99,28 +132,48 @@ public class DesignByDoingTest {
         this.activitiRule.getTaskService().complete(task.getId());
     }
 
+
+    /**
+     * 增加节点
+     * @param processInstance
+     * @param userTaskName
+     * @param assignee
+     */
     private void addUserTaskToProcessInstance(ProcessInstance processInstance, String userTaskName, String assignee) {
         ProcessEngineConfigurationImpl oldProcessEngineConfiguration = Context.getProcessEngineConfiguration();
         Context.setProcessEngineConfiguration((ProcessEngineConfigurationImpl) this.activitiRule.getProcessEngine().getProcessEngineConfiguration());
-
+        //拿到原来的流程数据
         Process process = ProcessDefinitionUtil.getProcess(processInstance.getProcessDefinitionId());
-
+        //增加新的节点数据
         process.addFlowElement(createUserTask("userTask"+this.counter, userTaskName, assignee));
         process.addFlowElement(createSequenceFlow("toUserTask" + this.counter, "userTask" + (this.counter-1), "userTask" + this.counter));
         process.removeFlowElement("toEnd");
         process.addFlowElement(createSequenceFlow("toEnd", "userTask" + this.counter, "end"));
         this.counter++;
 
+        //部署
         deployModelWithProcess(process);
+        //设置新流程的（新）版本
         upgradeProcessInstanceDefinitionVersion(processInstance);
         Context.setProcessEngineConfiguration(oldProcessEngineConfiguration);
     }
 
+
+    /**
+     * 设置新流程的（新）版本
+     * @param processInstance
+     */
     private void upgradeProcessInstanceDefinitionVersion(ProcessInstance processInstance) {
         ProcessDefinition processDefinition = this.activitiRule.getRepositoryService().getProcessDefinition(processInstance.getProcessDefinitionId());
         this.activitiRule.getManagementService().executeCommand(new SetProcessDefinitionVersionCmd(processInstance.getId(), processDefinition.getVersion() + 1));
     }
 
+
+    /**
+     * 部署
+     * @param process
+     * @return
+     */
     private Deployment deployModelWithProcess(Process process) {
         BpmnModel model = new BpmnModel();
         model.addProcess(process);
@@ -129,34 +182,66 @@ public class DesignByDoingTest {
                 .deploy();
     }
 
+
+    /**
+     * 创建一个单个节点的流程
+     * @param currentUserId
+     * @param taskName
+     * @return
+     */
     private ProcessInstance createAdaptiveProcessInstance(String currentUserId, String taskName) {
-        // 1. Build up the basic model
+        //1、建立基本模型
         Process process = new Process();
         process.setId("designByDoing-process");
 
+        //开始
         process.addFlowElement(createStartEvent());
+        //连线
         process.addFlowElement(createSequenceFlow("toUserTask" + this.counter, "start", "userTask" + this.counter));
+        //节点
         process.addFlowElement(createUserTask("userTask" + this.counter, taskName, currentUserId));
+        //连线
         process.addFlowElement(createSequenceFlow("toEnd", "userTask"+this.counter, "end"));
+        //结束
         process.addFlowElement(createEndEvent());
         this.counter++;
 
-        // 2. deploy basic process model
+        //2、部署基本流程模型
         deployModelWithProcess(process);
 
-        // start process instance according to the process definition
-        return activitiRule.getRuntimeService()
-                .startProcessInstanceByKey("designByDoing-process");
+        //3、根据流程定义启动流程实例
+        return activitiRule.getRuntimeService().startProcessInstanceByKey("designByDoing-process");
     }
 
+
+    /**
+     * 生成bpmn文件
+     * @param processDefinitionId
+     * @param namePrefix
+     * @param resourceName
+     * @throws IOException
+     */
     private void exportProcessDefinition(String processDefinitionId, String namePrefix, String resourceName) throws IOException {
+
         ProcessDefinition processDefinition = this.activitiRule.getRepositoryService().getProcessDefinition(processDefinitionId);
-        InputStream processBpmn = activitiRule.getRepositoryService()
-                .getResourceAsStream(processDefinition.getDeploymentId(), resourceName);
-        FileUtils.copyInputStreamToFile(processBpmn,
-                new File(namePrefix + "process.bpmn20.xml"));
+        //生成并保存bpmn文件
+        InputStream processBpmn = activitiRule.getRepositoryService().getResourceAsStream(processDefinition.getDeploymentId(), resourceName);
+        FileUtils.copyInputStreamToFile(processBpmn,new File(namePrefix + "process.bpmn20.xml"));
+
+//        //生成并保存流程图片
+//        InputStream processDiagram = activitiRule.getRepositoryService().getProcessDiagram(processDefinitionId);
+//        FileUtils.copyInputStreamToFile(processDiagram, new File(namePrefix +"process.png"));
     }
 
+
+    /**
+     * 创建任务节点
+     * 单人审批
+     * @param id
+     * @param name
+     * @param assignee
+     * @return
+     */
     private UserTask createUserTask(String id, String name, String assignee) {
         UserTask userTask = new UserTask();
         userTask.setName(name);
@@ -165,6 +250,13 @@ public class DesignByDoingTest {
         return userTask;
     }
 
+    /**
+     * 连线
+     * @param id
+     * @param from
+     * @param to
+     * @return
+     */
     private SequenceFlow createSequenceFlow(String id, String from, String to) {
         SequenceFlow flow = new SequenceFlow();
         flow.setId(id);
@@ -173,12 +265,22 @@ public class DesignByDoingTest {
         return flow;
     }
 
+
+    /**
+     * 开始节点
+     * @return
+     */
     private StartEvent createStartEvent() {
         StartEvent startEvent = new StartEvent();
         startEvent.setId("start");
         return startEvent;
     }
 
+
+    /**
+     * 结束节点
+     * @return
+     */
     private EndEvent createEndEvent() {
         EndEvent endEvent = new EndEvent();
         endEvent.setId("end");

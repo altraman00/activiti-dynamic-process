@@ -15,6 +15,7 @@ import org.activiti.engine.runtime.ProcessInstance;
 import org.activiti.engine.task.Task;
 import org.activiti.engine.test.ActivitiRule;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -26,7 +27,7 @@ public class DynamicActivitiProcessTest {
   @Test
   public void testDynamicDeploy() throws Exception {
 
-    String processDefinitionKey = "my-process-8";
+    String processDefinitionKey = "my-process-9";
     String businessKey = "1";
 
     // 1. Build up the model from scratch
@@ -52,12 +53,12 @@ public class DynamicActivitiProcessTest {
     process.addFlowElement(createUserTask("task2", "Second task", "${approveUser}",list));
     process.addFlowElement(createEndEvent());
 
-    process.addFlowElement(createSequenceFlow("start", "task1"));
-    process.addFlowElement(createSequenceFlow("task1", "gateway1"));
+    process.addFlowElement(createSequenceFlow("start", "task1",null));
+    process.addFlowElement(createSequenceFlow("task1", "gateway1",null));
     process.addFlowElement(createExclusiveGateway("gateway1","task1网关"));
-    process.addFlowElement(createSequenceFlow("gateway1", "task2"));
-    process.addFlowElement(createSequenceFlow("gateway1", "end"));
-    process.addFlowElement(createSequenceFlow("task2", "end"));
+    process.addFlowElement(createSequenceFlow("gateway1", "task2","${action == \"y\" || action == \"Y\"}"));
+    process.addFlowElement(createSequenceFlow("gateway1", "end","${action == \"y\" || action == \"Y\"}"));
+    process.addFlowElement(createSequenceFlow("task2", "end",null));
 
     // 2. Generate graphical information
     new BpmnAutoLayout(model).execute();
@@ -108,15 +109,18 @@ public class DynamicActivitiProcessTest {
 
 
   /**
-   * 连线
+   * 连线 SequenceFlow中添加ConditionExpression
    * @param from
    * @param to
    * @return
    */
-  protected SequenceFlow createSequenceFlow(String from, String to) {
+  protected SequenceFlow createSequenceFlow(String from, String to,String conditionExpressio) {
     SequenceFlow flow = new SequenceFlow();
     flow.setSourceRef(from);
     flow.setTargetRef(to);
+    if(StringUtils.isNotEmpty(conditionExpressio)){
+      flow.setConditionExpression(conditionExpressio);
+    }
     return flow;
   }
 

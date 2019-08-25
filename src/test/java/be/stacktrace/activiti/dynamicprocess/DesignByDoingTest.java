@@ -24,7 +24,7 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.assertThat;
 
 /**
- *
+ * 在节点中插入新节点
  *
  * This example shows how to implement design by doing with adaptive process definitions
  */
